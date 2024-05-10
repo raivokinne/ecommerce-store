@@ -40,8 +40,7 @@ Route::get('/cart', [CartController::class, 'index'])->name('cart');
 Route::post('/cart', [CartController::class, 'store'])->name('cart.store');
 Route::delete('/cart/{id}', [CartController::class, 'destroy'])->name('cart.destroy');
 
-Route::get('/checkout', [PaymentController::class, 'checkout'])->name('checkout');
-Route::get('/success', [ProductController::class, 'success'])->name('checkout.success');
-Route::get('/cancel', [ProductController::class, 'cancel'])->name('checkout.cancel');
+Route::get('/checkout', [PaymentController::class, 'index'])->name('checkout');
+Route::get('/payment', [PaymentController::class, 'checkout'])->name('payment');
 
 require __DIR__ . '/auth.php';

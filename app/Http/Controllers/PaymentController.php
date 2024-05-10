@@ -8,76 +8,80 @@ use Stripe\Stripe;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\Cart;
+use Illuminate\Support\Facades\DB;
 
 class PaymentController extends Controller
 {
-
-
-    public function checkout()
+    public function index()
     {
-        \Stripe\Stripe::setApiKey(env('STRIPE_SECRET'));
-
-        $products = Product::all();
-        $lineItems = [];
-        $totalPrice = 0;
-        foreach ($products as $product) {
-            $totalPrice += $product->price;
-            $lineItems[] = [
-                'price_data' => [
-                    'currency' => 'usd',
-                    'product_data' => [
-                        'name' => $product->name,
-                        'images' => [$product->image]
-                    ],
-                    'unit_amount' => $product->price * 100,
-                ],
-                'quantity' => 1,
-            ];
-        }
-        $session = \Stripe\Checkout\Session::create([
-            'line_items' => $lineItems,
-            'mode' => 'payment',
-            'success_url' => route('checkout.success', [], true) . "?session_id={CHECKOUT_SESSION_ID}",
-            'cancel_url' => route('checkout.cancel', [], true),
+        $carts = Cart::where('user_id', auth()->id())->get();
+        $carts->load('product');
+        return Inertia::render('Payment/Checkout', [
+            'carts' => $carts
         ]);
-
-        $order = new Order();
-        $order->status = 'unpaid';
-        $order->total_price = $totalPrice;
-        $order->session_id = $session->id;
-        $order->save();
-
-        return redirect($session->url);
     }
-
-    public function success(Request $request)
+    public function checkout(Request $request)
     {
-        \Stripe\Stripe::setApiKey(env('STRIPE_SECRET_KEY'));
-        $sessionId = $request->get('session_id');
-
+        DB::beginTransaction();
         try {
-            $session = \Stripe\Checkout\Session::retrieve($sessionId);
-            if (!$session) {
-                throw new NotFoundHttpException;
-            }
-            $customer = \Stripe\Customer::retrieve($session->customer);
+            $request->validate(
+                [
+                    'address' => 'required|string|max:255',
+                    'shipping_method' => 'required|string|max:255',
+                    'country' => 'required|string|max:255',
+                    'city' => 'required|string|max:255',
+                    'postal_code' => 'required|string|max:255',
+                    'phone' => 'required|string|max:255',
+                    'stripeToken' => 'required|string',
+                ]
+            );
+            $carts = Cart::where('user_id', auth()->id())->get();
 
-            $order = Order::where('session_id', $session->id)->first();
-            if (!$order) {
-                throw new NotFoundHttpException();
-            }
-            if ($order->status === 'unpaid') {
-                $order->status = 'paid';
-                $order->save();
+            Stripe::setApiKey(env('STRIPE_SECRET'));
+
+            $totalPrice = 0;
+            foreach ($carts as $cart) {
+                $totalPrice += $cart->product->price * $cart->quantity;
             }
 
-            return view('product.checkout-success', compact('customer'));
+            $order = new Order();
+            $order->status = 'pending';
+            $order->name = auth()->user()->name;
+            $order->email = auth()->user()->email;
+            $order->payment_status = 'paid';
+            $order->address = $request->address;
+            $order->country = $request->country;
+            $order->city = $request->city;
+            $order->postal_code = $request->postal_code;
+            $order->phone = $request->phone;
+            $order->user_id = auth()->id();
+            $order->shipping_method = $request->shipping_method;
+            $order->shipping_status = 'pending';
+            $order->tracking_id = 'nr-' . rand(100000, 999999);
+            $order->total_price = $cart->product->id;
+            $order->save();
+
+            \Stripe\Charge::create(
+                [
+                    'amount' => $totalPrice * 100,
+                    'currency' => 'eur',
+                    'source' => $request->stripeToken,
+                    'description' => 'Order from ' . auth()->user()->email,
+                    'receipt_email' => auth()->user()->email,
+                ]
+            );
+
+            $order->payment_status = 'paid';
+
+            Cart::where('user_id', auth()->id())->delete();
+
+            DB::commit();
+
+            return redirect()->route('cart.index')->with('success', 'Order placed successfully.');
         } catch (\Exception $e) {
-            throw new NotFoundHttpException();
+            DB::rollback();
+            return back()->withErrors(['error' => 'Error processing payment.']);
         }
-    }
-
-    public function cancel()
-    {
     }
 }
