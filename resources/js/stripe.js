@@ -1,6 +1,6 @@
 var stripe = Stripe(import.meta.env.VITE_STRIPE_KEY);
 var elements = stripe.elements();
-var card = elements.create("card");
+const card = elements.create("card");
 card.mount("#card-element");
 
 // Handle form submission

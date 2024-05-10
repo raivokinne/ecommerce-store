@@ -6,8 +6,8 @@ import PrimaryButton from "@/Components/PrimaryButton";
 import TextInput from "@/Components/TextInput";
 import { Head, Link, useForm } from "@inertiajs/react";
 
-export default function Edit({ categories, product }) {
-    const { data, setData, post, processing, errors, reset } = useForm({
+export default function Edit({ product, categories }) {
+    const { data, setData, put, processing, errors, reset } = useForm({
         name: product.name,
         description: product.description,
         price: product.price,
@@ -150,10 +150,7 @@ export default function Edit({ categories, product }) {
                             <option
                                 key={category.id}
                                 value={category.id}
-                                className="block w-full mt-1"
-                            >
-                                {category.name}
-                            </option>
+                            >{`${category.name} - ${category.id}`}</option>
                         ))}
                     </select>
                 </div>
