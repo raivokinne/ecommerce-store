@@ -6,7 +6,7 @@ export default function Show({ product, auth }) {
         user_id: auth.user.id,
         product_id: product.id,
         quantity: 1,
-        price: product.price * 100,
+        price: product.price,
     });
     const submit = (e) => {
         e.preventDefault();
@@ -34,7 +34,7 @@ export default function Show({ product, auth }) {
                         </div>
                         <div className="flex flex-col justify-between">
                             <div className="flex flex-col">
-                                <h1 className="mb-4 text-3xl font-bold text-blue-600">
+                                <h1 className="mb-4 text-3xl font-bold">
                                     {product.name}
                                 </h1>
                                 <p className="mb-4 text-xl text-gray-700">
@@ -43,9 +43,9 @@ export default function Show({ product, auth }) {
                                 <p className="mb-4 text-xl font-bold">
                                     ${product.price}
                                 </p>
-                                <p className="mb-4 text-xl font-bold">
-                                    Stock: {product.stock}
-                                </p>
+                            </div>
+
+                            <div className="grid gap-4">
                                 <div>
                                     <label
                                         htmlFor="quantity"
@@ -64,16 +64,16 @@ export default function Show({ product, auth }) {
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                                     />
                                 </div>
-                            </div>
 
-                            <form onSubmit={submit}>
-                                <button
-                                    type="submit"
-                                    className="w-full px-4 py-2 text-white bg-blue-500 rounded-lg"
-                                >
-                                    Add to Cart
-                                </button>
-                            </form>
+                                <form onSubmit={submit}>
+                                    <button
+                                        type="submit"
+                                        className="w-full px-4 py-2 text-white bg-black rounded-lg"
+                                    >
+                                        Add to Cart
+                                    </button>
+                                </form>
+                            </div>
                         </div>
                     </div>
                 </div>
